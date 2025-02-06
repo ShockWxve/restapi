@@ -10,7 +10,7 @@ import (
 
 var task string
 
-func helloHandler(w http.ResponseWriter, r *http.Request) {
+func getHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Hello, world!")
 	// d, err := io.ReadAll(r.Body)
 	// if err != nil {
@@ -22,7 +22,7 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/api/hello", helloHandler).Methods("GET")
+	router.HandleFunc("/api/hello", getHandler).Methods("GET")
 
 	http.ListenAndServe(":8080", router)
 }
