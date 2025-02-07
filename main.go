@@ -34,13 +34,13 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	if err := dec.Decode(requestBody); err != nil { // Десериализуем body
 		e := fmt.Sprintln("Ошибка:", err) // Обрабатываем ошибки
-		fmt.Print(e)
+		log.Print(e)
 		fmt.Fprint(w, e)
-	} else {
-		fmt.Fprint(w, "OK!") // Возвращаем ответ
-	}
 
-	task = requestBody.Message // Присваиваем значение из body в глобальную переменную
+	} else {
+		fmt.Fprint(w, "OK!")       // Возвращаем ответ
+		task = requestBody.Message // Присваиваем значение из body в глобальную переменную
+	}
 }
 
 func main() {
