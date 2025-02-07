@@ -12,7 +12,7 @@ import (
 var task string
 
 type RequestBody struct {
-	Message string `json:"message"`
+	Message string `json:"message,omitempty"`
 }
 
 func getHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,20 +27,20 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("POST request")
+	log.Println("POST request") // Лог о получении запроса
 
 	requestBody := new(RequestBody)
+
 	dec := json.NewDecoder(r.Body)
-	// log.Printf("%v\n%s", r.Body, r.Body)
-	if err := dec.Decode(requestBody); err != nil {
-		e := fmt.Sprintln("Ошибка:", err)
+	if err := dec.Decode(requestBody); err != nil { // Десериализуем body
+		e := fmt.Sprintln("Ошибка:", err) // Обрабатываем ошибки
 		fmt.Print(e)
 		fmt.Fprint(w, e)
 	} else {
-		fmt.Fprint(w, "OK!")
+		fmt.Fprint(w, "OK!") // Возвращаем ответ
 	}
 
-	task = requestBody.Message
+	task = requestBody.Message // Присваиваем значение из body в глобальную переменную
 }
 
 func main() {
