@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -27,5 +26,4 @@ func main() {
 	router.HandleFunc("/api/delete/{id}", handler.DeleteTasksHandler).Methods("DELETE")
 	log.Println("Сервер запущен")
 	http.ListenAndServe(":8080", router)
-	fmt.Scan()
 }
