@@ -57,7 +57,7 @@ func (h *Handler) PostTaskHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(createdTask)
 }
 
-func (h *Handler) PatchTasksHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) PatchTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("PATCH request")
 
 	vars := mux.Vars(r)
@@ -114,7 +114,7 @@ func (h *Handler) PatchTasksHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(updatedTask)
 }
 
-func (h *Handler) DeleteTasksHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("DELETE request")
 
 	vars := mux.Vars(r)
