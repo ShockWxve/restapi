@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"context"
-	"log"
+	"net/http"
 
+	"github.com/labstack/echo"
 	"github.com/shock_wave/restapi/internal/taskService"
 	"github.com/shock_wave/restapi/internal/web/tasks"
 )
@@ -20,8 +21,6 @@ func NewHandler(service *taskService.TaskService) *Handler {
 
 // GetTasks implements tasks.StrictServerInterface.
 func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
-	log.Println("GET request")
-
 	allTasks, err := h.Service.ReadAllTasks()
 	if err != nil {
 		return nil, err
@@ -34,9 +33,9 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 	// Заполняем слайс response всеми задачами из БД
 	for _, tsk := range allTasks {
 		task := tasks.Task{
-			Id:     &tsk.ID,
-			Task:   &tsk.Task,
-			IsDone: &tsk.IsDone,
+			Id:     tsk.ID,
+			Task:   tsk.Task,
+			IsDone: tsk.IsDone,
 		}
 
 		response = append(response, task)
@@ -47,13 +46,11 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 
 // PostTasks implements tasks.StrictServerInterface.
 func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
-	log.Println("POST request")
-
 	taskRequest := request.Body
 	// Обращаемся к сервису и создаем задачу
 	taskToCreate := taskService.Task{
-		Task:   *taskRequest.Task,
-		IsDone: *taskRequest.IsDone,
+		Task:   taskRequest.Task,
+		IsDone: taskRequest.IsDone,
 	}
 	createdTask, err := h.Service.CreateTask(taskToCreate)
 	if err != nil {
@@ -62,127 +59,50 @@ func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestO
 
 	// создаем структуру респонс
 	response := tasks.PostTasks201JSONResponse{
-		Id:     &createdTask.ID,
-		Task:   &createdTask.Task,
-		IsDone: &createdTask.IsDone,
+		Id:     createdTask.ID,
+		Task:   createdTask.Task,
+		IsDone: createdTask.IsDone,
 	}
 	return response, nil
 }
 
-// GetTasks implements tasks.StrictServerInterface.
-func (h *Handler) PatchTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
-	panic("unimplemented")
+// PatchTasksId implements tasks.StrictServerInterface.
+func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
+	id := uint(request.Id)
+	updates := make(map[string]interface{})
+
+	if request.Body.Task != nil {
+		updates["task"] = *request.Body.Task
+	}
+	if request.Body.IsDone != nil {
+		updates["is_done"] = *request.Body.IsDone
+	}
+
+	if len(updates) == 0 {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "No updates provided")
+	}
+
+	updatedTask, err := h.Service.UpdateTaskByID(id, updates)
+	if err != nil {
+		return nil, err
+	}
+
+	response := tasks.PatchTasksId200JSONResponse{
+		Id:     updatedTask.ID,
+		Task:   updatedTask.Task,
+		IsDone: updatedTask.IsDone,
+	}
+	return response, nil
 }
 
-// GetTasks implements tasks.StrictServerInterface.
-func (h *Handler) DeleteTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
-	panic("unimplemented")
+// DeleteTasksId implements tasks.StrictServerInterface.
+func (h *Handler) DeleteTasksId(ctx context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
+	id := uint(request.Id)
+
+	err := h.Service.DeleteTaskByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return tasks.DeleteTasksId204Response{}, nil
 }
-
-// func (h *Handler) PostTaskHandler(w http.ResponseWriter, r *http.Request) {
-// 	log.Println("POST request")
-
-// 	var task taskService.Task
-
-// 	dec := json.NewDecoder(r.Body)
-// 	if err := dec.Decode(&task); err != nil {
-// 		e := err.Error()
-// 		log.Println(e)
-// 		http.Error(w, e, http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	createdTask, err := h.Service.CreateTask(task)
-// 	if err != nil {
-// 		e := err.Error()
-// 		log.Println(e)
-// 		http.Error(w, e, http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(createdTask)
-// }
-
-// func (h *Handler) PatchTaskHandler(w http.ResponseWriter, r *http.Request) {
-// 	log.Println("PATCH request")
-
-// 	vars := mux.Vars(r)
-// 	idStr := vars["id"]
-
-// 	id, err := strconv.ParseUint(idStr, 10, strconv.IntSize)
-// 	if err != nil {
-// 		e := err.Error()
-// 		log.Println(e)
-// 		http.Error(w, "invalid id", http.StatusBadRequest)
-// 		return
-// 	}
-// 	taskID := uint(id)
-
-// 	var updateData struct {
-// 		Task   string `json:"task,omitempty"`
-// 		IsDone *bool  `json:"is_done,omitempty"`
-// 	}
-
-// 	// Декодируем тело запроса в структуру updateData
-// 	dec := json.NewDecoder(r.Body)
-// 	if err := dec.Decode(&updateData); err != nil {
-// 		e := err.Error()
-// 		log.Println(e)
-// 		http.Error(w, e, http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	updates := make(map[string]interface{})
-// 	if updateData.Task != "" {
-// 		updates["task"] = updateData.Task
-// 	}
-// 	if updateData.IsDone != nil {
-// 		updates["is_done"] = *updateData.IsDone
-// 	}
-
-// 	// Проверяем, есть ли изменения
-// 	if len(updates) == 0 {
-// 		e := "empty fields"
-// 		log.Println(e)
-// 		http.Error(w, e, http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	updatedTask, err := h.Service.UpdateTaskByID(taskID, updates)
-// 	if err != nil {
-// 		e := err.Error()
-// 		log.Println(e)
-// 		http.Error(w, e, http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(updatedTask)
-// }
-
-// func (h *Handler) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
-// 	log.Println("DELETE request")
-
-// 	vars := mux.Vars(r)
-// 	idStr := vars["id"]
-
-// 	id, err := strconv.ParseUint(idStr, 10, strconv.IntSize)
-// 	if err != nil {
-// 		e := err.Error()
-// 		log.Println(e)
-// 		http.Error(w, "invalid id", http.StatusBadRequest)
-// 		return
-// 	}
-// 	taskID := uint(id)
-
-// 	err = h.Service.DeleteTaskByID(taskID)
-// 	if err != nil {
-// 		e := err.Error()
-// 		log.Println(e)
-// 		http.Error(w, e, http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.WriteHeader(http.StatusNoContent)
-// }
