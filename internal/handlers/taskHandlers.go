@@ -47,7 +47,26 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 
 // PostTasks implements tasks.StrictServerInterface.
 func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
-	panic("unimplemented")
+	log.Println("POST request")
+
+	taskRequest := request.Body
+	// Обращаемся к сервису и создаем задачу
+	taskToCreate := taskService.Task{
+		Task:   *taskRequest.Task,
+		IsDone: *taskRequest.IsDone,
+	}
+	createdTask, err := h.Service.CreateTask(taskToCreate)
+	if err != nil {
+		return nil, err
+	}
+
+	// создаем структуру респонс
+	response := tasks.PostTasks201JSONResponse{
+		Id:     &createdTask.ID,
+		Task:   &createdTask.Task,
+		IsDone: &createdTask.IsDone,
+	}
+	return response, nil
 }
 
 // GetTasks implements tasks.StrictServerInterface.
@@ -59,18 +78,6 @@ func (h *Handler) PatchTasks(ctx context.Context, request tasks.GetTasksRequestO
 func (h *Handler) DeleteTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
 	panic("unimplemented")
 }
-
-// func (h *Handler) GetTasksHandler(w http.ResponseWriter, r *http.Request) {
-// 	log.Println("GET request")
-
-// 	tasks, err := h.Service.ReadAllTasks()
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(tasks)
-// }
 
 // func (h *Handler) PostTaskHandler(w http.ResponseWriter, r *http.Request) {
 // 	log.Println("POST request")
