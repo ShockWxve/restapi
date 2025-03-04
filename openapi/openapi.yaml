@@ -87,12 +87,10 @@ components:
           type: string
         is_done:
           type: boolean
-      required:
-        - id
-        - task
-        - is_done
-
-
+      # required:
+      #   - id
+      #   - task
+      #   - is_done
     TaskUpdate:
       type: object
       properties:

@@ -16,9 +16,9 @@ import (
 
 // Task defines model for Task.
 type Task struct {
-	Id     uint   `json:"id"`
-	IsDone bool   `json:"is_done"`
-	Task   string `json:"task"`
+	Id     *uint   `json:"id,omitempty"`
+	IsDone *bool   `json:"is_done,omitempty"`
+	Task   *string `json:"task,omitempty"`
 }
 
 // TaskUpdate defines model for TaskUpdate.
