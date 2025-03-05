@@ -5,10 +5,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/shock_wave/restapi/internal/database"
-	"github.com/shock_wave/restapi/internal/handlers"
-	"github.com/shock_wave/restapi/internal/taskService"
-	"github.com/shock_wave/restapi/internal/web/tasks"
+	"github.com/shockwxve/restapi/internal/database"
+	"github.com/shockwxve/restapi/internal/handlers"
+	"github.com/shockwxve/restapi/internal/taskService"
+	"github.com/shockwxve/restapi/internal/web/tasks"
 )
 
 func main() {

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo"
-	"github.com/shock_wave/restapi/internal/taskService"
-	"github.com/shock_wave/restapi/internal/web/tasks"
+	"github.com/shockwxve/restapi/internal/taskService"
+	"github.com/shockwxve/restapi/internal/web/tasks"
 	"gorm.io/gorm"
 )
 
@@ -34,17 +34,19 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 		return nil, err
 	}
 
-	var response []tasks.Task
+	response := tasks.GetTasks200JSONResponse{}
 
 	// Заполняем слайс response всеми задачами из БД
 	for _, tsk := range allTasks {
-		response = append(response, tasks.Task{
+		task := tasks.Task{
 			Id:     &tsk.ID,
 			Task:   &tsk.Task,
 			IsDone: &tsk.IsDone,
-		})
+		}
+		response = append(response, task)
 	}
-	return tasks.GetTasks200JSONResponse(response), nil
+
+	return response, nil
 }
 
 // PostTasks implements tasks.StrictServerInterface.
@@ -61,27 +63,24 @@ func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestO
 		return nil, err
 	}
 
-	// создаем структуру респонс
-	response := tasks.Task{
+	return tasks.PostTasks201JSONResponse{
 		Id:     &createdTask.ID,
 		Task:   &createdTask.Task,
 		IsDone: &createdTask.IsDone,
-	}
-	return tasks.PostTasks201JSONResponse(response), nil
+	}, nil
 }
 
 // PatchTasksId implements tasks.StrictServerInterface.
 func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
 	id := uint(request.Id)
 
-	// Сразу проверяем, есть ли обновления
+	// Проверяем, есть ли обновления
 	if request.Body.Task == nil && request.Body.IsDone == nil {
 		return nil, echo.NewHTTPError(http.StatusBadRequest, "No updates provided")
 	}
 
-	// Формируем мапу обновлений
+	// Формируем карту обновлений
 	updates := make(map[string]interface{})
-	// Забираем из тела только непустые значения
 	if request.Body.Task != nil {
 		updates["task"] = *request.Body.Task
 	}
@@ -91,20 +90,19 @@ func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRe
 
 	// Обновляем задачу
 	updatedTask, err := h.Service.UpdateTaskByID(id, updates)
-	switch err {
-	case nil:
-		response := tasks.Task{
-			Id:     &updatedTask.ID,
-			Task:   &updatedTask.Task,
-			IsDone: &updatedTask.IsDone,
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, echo.NewHTTPError(http.StatusNotFound, "Task not found")
 		}
-		return tasks.PatchTasksId200JSONResponse(response), nil
-	case gorm.ErrRecordNotFound:
-		return nil, echo.NewHTTPError(http.StatusNotFound, "Task not found")
-	default:
 		return nil, err
 	}
 
+	// Возвращаем обновленный объект
+	return tasks.PatchTasksId200JSONResponse{
+		Id:     &updatedTask.ID,
+		Task:   &updatedTask.Task,
+		IsDone: &updatedTask.IsDone,
+	}, nil
 }
 
 // DeleteTasksId implements tasks.StrictServerInterface.
