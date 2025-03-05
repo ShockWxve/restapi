@@ -20,13 +20,6 @@ func NewHandler(service *taskService.TaskService) *Handler {
 	}
 }
 
-// // Для вывода полей в нужном порядке
-// type CustomTaskResponse struct {
-// 	Id     uint   `json:"id"`
-// 	Task   string `json:"task"`
-// 	IsDone bool   `json:"is_done"`
-// }
-
 // GetTasks implements tasks.StrictServerInterface.
 func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
 	allTasks, err := h.Service.ReadAllTasks()
@@ -34,6 +27,7 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 		return nil, err
 	}
 
+	// Инициализируем, чтобы выводился пустой массив, а не null
 	response := tasks.GetTasks200JSONResponse{}
 
 	// Заполняем слайс response всеми задачами из БД
