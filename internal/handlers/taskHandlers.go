@@ -10,32 +10,27 @@ import (
 	"gorm.io/gorm"
 )
 
-type Handler struct {
+type TaskHandler struct {
 	Service *taskService.TaskService
 }
 
-func NewHandler(service *taskService.TaskService) *Handler {
-	return &Handler{
-		Service: service,
-	}
+func NewTaskHandler(service *taskService.TaskService) *TaskHandler {
+	return &TaskHandler{Service: service}
 }
 
-// GetTasks implements tasks.StrictServerInterface.
-func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
-	allTasks, err := h.Service.ReadAllTasks()
+func (th *TaskHandler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
+	allTasks, err := th.Service.ReadAllTasks()
 	if err != nil {
 		return nil, err
 	}
 
-	// Инициализируем, чтобы выводился пустой массив, а не null
 	response := tasks.GetTasks200JSONResponse{}
-
-	// Заполняем слайс response всеми задачами из БД
 	for _, tsk := range allTasks {
 		task := tasks.Task{
 			Id:     &tsk.ID,
 			Task:   &tsk.Task,
 			IsDone: &tsk.IsDone,
+			UserId: &tsk.UserID,
 		}
 		response = append(response, task)
 	}
@@ -43,16 +38,19 @@ func (h *Handler) GetTasks(ctx context.Context, request tasks.GetTasksRequestObj
 	return response, nil
 }
 
-// PostTasks implements tasks.StrictServerInterface.
-func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
+func (th *TaskHandler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
 	taskRequest := request.Body
-
-	// Обращаемся к сервису и создаем задачу
-	taskToCreate := taskService.Task{
-		Task:   *taskRequest.Task,
-		IsDone: *taskRequest.IsDone,
+	if taskRequest.UserId == 0 {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "user_id is required")
 	}
-	createdTask, err := h.Service.CreateTask(taskToCreate)
+
+	taskToCreate := taskService.Task{
+		Task:   taskRequest.Task,
+		IsDone: *taskRequest.IsDone,
+		UserID: taskRequest.UserId,
+	}
+
+	createdTask, err := th.Service.CreateTask(taskToCreate, taskRequest.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -61,19 +59,17 @@ func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestO
 		Id:     &createdTask.ID,
 		Task:   &createdTask.Task,
 		IsDone: &createdTask.IsDone,
+		UserId: &createdTask.UserID,
 	}, nil
 }
 
-// PatchTasksId implements tasks.StrictServerInterface.
-func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
+func (th *TaskHandler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
 	id := uint(request.Id)
 
-	// Проверяем, есть ли обновления
-	if request.Body.Task == nil && request.Body.IsDone == nil {
+	if request.Body.Task == nil && request.Body.IsDone == nil && request.Body.UserId == nil {
 		return nil, echo.NewHTTPError(http.StatusBadRequest, "No updates provided")
 	}
 
-	// Формируем карту обновлений
 	updates := make(map[string]interface{})
 	if request.Body.Task != nil {
 		updates["task"] = *request.Body.Task
@@ -81,9 +77,11 @@ func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRe
 	if request.Body.IsDone != nil {
 		updates["is_done"] = *request.Body.IsDone
 	}
+	if request.Body.UserId != nil {
+		updates["user_id"] = *request.Body.UserId
+	}
 
-	// Обновляем задачу
-	updatedTask, err := h.Service.UpdateTaskByID(id, updates)
+	updatedTask, err := th.Service.UpdateTaskByID(id, updates)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, echo.NewHTTPError(http.StatusNotFound, "Task not found")
@@ -91,21 +89,41 @@ func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRe
 		return nil, err
 	}
 
-	// Возвращаем обновленный объект
 	return tasks.PatchTasksId200JSONResponse{
 		Id:     &updatedTask.ID,
 		Task:   &updatedTask.Task,
 		IsDone: &updatedTask.IsDone,
+		UserId: &updatedTask.UserID,
 	}, nil
 }
 
-// DeleteTasksId implements tasks.StrictServerInterface.
-func (h *Handler) DeleteTasksId(ctx context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
+func (th *TaskHandler) DeleteTasksId(ctx context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
 	id := uint(request.Id)
 
-	err := h.Service.DeleteTaskByID(id)
+	err := th.Service.DeleteTaskByID(id)
 	if err != nil {
 		return nil, err
 	}
 	return tasks.DeleteTasksId204Response{}, nil
+}
+
+func (th *TaskHandler) GetUsersIdTasks(ctx context.Context, request tasks.GetUsersIdTasksRequestObject) (tasks.GetUsersIdTasksResponseObject, error) {
+	userID := uint(request.Id)
+
+	userTasks, err := th.Service.GetTasksByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var response tasks.GetUsersIdTasks200JSONResponse
+	for _, task := range userTasks {
+		response = append(response, tasks.Task{
+			Id:     &task.ID,
+			Task:   &task.Task,
+			IsDone: &task.IsDone,
+			UserId: &task.UserID,
+		})
+	}
+
+	return response, nil
 }

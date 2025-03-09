@@ -7,15 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// переменная, через которую мы будем работать с БД
 var DB *gorm.DB
 
 func InitDB() {
-	// в dsn вводим данные, которые мы указали при создании контейнера
 	dsn := "host=localhost user=postgres password=pwd1111! dbname=postgres port=5432 sslmode=disable"
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
+	// Убираем миграцию для User, чтобы не было конфликтов с ограничениями
+	// DB.AutoMigrate(&taskService.Task{})
+	// Если нужно добавить Task и User вместе, раскомментируй:
+	// DB.AutoMigrate(&taskService.Task{}, &userService.User{})
 }

@@ -8,28 +8,44 @@ import (
 	"github.com/shockwxve/restapi/internal/database"
 	"github.com/shockwxve/restapi/internal/handlers"
 	"github.com/shockwxve/restapi/internal/taskService"
+	"github.com/shockwxve/restapi/internal/userService"
 	"github.com/shockwxve/restapi/internal/web/tasks"
+	"github.com/shockwxve/restapi/internal/web/users"
 )
 
 func main() {
+	// Инициализируем БД
 	database.InitDB()
 
-	repo := taskService.NewTaskRepository(database.DB)
-	service := taskService.NewService(repo)
-	handler := handlers.NewHandler(service)
+	// Инициализируем репозитории
+	tasksRepo := taskService.NewRepository(database.DB)
+	usersRepo := userService.NewRepository(database.DB)
 
-	// Инициализируем echo
+	// Инициализируем сервисы
+	tasksService := taskService.NewService(tasksRepo)
+	usersService := userService.NewService(usersRepo)
+
+	// Инициализируем хендлеры
+	tasksHandler := handlers.NewTaskHandler(tasksService)
+	usersHandler := handlers.NewUserHandler(usersService)
+
+	// Создаём Echo
 	e := echo.New()
 
-	// используем Logger и Recover
+	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	// Прикол для работы в echo. Передаем и регистрируем хендлер в echo
-	strictHandler := tasks.NewStrictHandler(handler, nil) // тут будет ошибка
-	tasks.RegisterHandlers(e, strictHandler)
+	// Регистрируем хендлеры для задач
+	tasksStrictHandler := tasks.NewStrictHandler(tasksHandler, nil)
+	tasks.RegisterHandlers(e, tasksStrictHandler)
 
+	// Регистрируем хендлеры для пользователей
+	usersStrictHandler := users.NewStrictHandler(usersHandler, nil)
+	users.RegisterHandlers(e, usersStrictHandler)
+
+	// Запускаем сервер на 8080 порту
 	if err := e.Start(":8080"); err != nil {
-		log.Fatalf("failed to start with err: %v", err)
+		log.Fatalf("failed to start server: %v", err)
 	}
 }
